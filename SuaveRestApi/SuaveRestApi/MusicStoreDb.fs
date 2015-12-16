@@ -2,27 +2,27 @@
 
 open FSharp.Data.Sql
 
-module MusicStoreDb = 
-    type Album = 
-        { 
+module MusicStoreDb =
+    type Album =
+        {
           AlbumId : int
           ArtistId : int
           GenreId : int
           Title : string
           Price : decimal}
-    
-    type private Sql = SqlDataProvider< "Server=localhost;Database=SuaveMusicStore;Trusted_Connection=True;MultipleActiveResultSets=true;Integrated Security=SSPI;", DatabaseVendor=Common.DatabaseProviderTypes.MSSQLSERVER >
-    
+
+    type private Sql = SqlDataProvider< "Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename=Z:\Source\suave\suave-example\SuaveRestApi\LocalDb\MusicStore.mdf;Integrated Security=True", DatabaseVendor=Common.DatabaseProviderTypes.MSSQLSERVER >
+
     type DbContext = Sql.dataContext
-    
+
     type AlbumEntity = DbContext.``[dbo].[Albums]Entity``
-    
+
     let private getContext() = Sql.GetDataContext()
-    
+
     let firstOrNone s = s |> Seq.tryFind (fun _ -> true)
 
     let mapToAlbum (albumEntity : AlbumEntity) =
-        {   
+        {
             AlbumId = albumEntity.AlbumId
             ArtistId = albumEntity.ArtistId
             GenreId = albumEntity.GenreId
@@ -30,12 +30,12 @@ module MusicStoreDb =
             Price = albumEntity.Price
         }
 
-    let getAlbums () = 
+    let getAlbums () =
         getContext().``[dbo].[Albums]``
         |> Seq.map mapToAlbum
 
-    let getAlbumEntityById (ctx : DbContext) id = 
-        query { 
+    let getAlbumEntityById (ctx : DbContext) id =
+        query {
         for album in ctx.``[dbo].[Albums]`` do
             where (album.AlbumId = id)
             select album
@@ -46,7 +46,9 @@ module MusicStoreDb =
 
     let createAlbum album =
         let ctx = getContext()
-        let album = ctx.``[dbo].[Albums]``.Create(album.ArtistId, album.GenreId, album.Price, album.Title)
+        let album = ctx.``[dbo].[Albums]``.Create()
+        album.AlbumId <- album.AlbumId
+        album.ArtistId <- album.ArtistId
         ctx.SubmitUpdates()
         album |> mapToAlbum
 
@@ -62,10 +64,9 @@ module MusicStoreDb =
             a.Title <- album.Title
             ctx.SubmitUpdates()
             Some album
-        
+
     let updateAlbum album =
         updateAlbumById album.AlbumId album
-
 
     let deleteAlbum id =
         let ctx = getContext()
@@ -82,4 +83,3 @@ module MusicStoreDb =
         match albumEntity with
         | None -> false
         | Some _ -> true
-    
